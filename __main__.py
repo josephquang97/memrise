@@ -1,61 +1,27 @@
-from schema import Memrise
 from getpass import getpass
-import pyttsx3, re, tempfile
+from schema import SQLite, Memrise
+import logging
 
-ENGLISH_GB = (
-    "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-GB_HAZEL_11.0"
-)
-
-ENGLISH = [
-    "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0",
-    "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_DAVID_11.0",
-]
-
-FRENCH = [
-    "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_FR-FR_HORTENSE_11.0",
-    "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_V110_FR-FR_PAUL_11.0",
-]
-
-JAPAN = [
-    "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_JA-JP_HARUKA_11.0",
-    "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_JA-JP_ICHIRO_11.0",
-]
-
-
-def concat(words: str):
-    mywords = re.findall("\\w+", words.lower())
-    retstr = ""
-    for myword in mywords:
-        retstr += myword[0].upper() + myword[1:]
-    return retstr
+PATH = "C:\\Users\\JosephQuang\\Desktop\\ELSA\\"
+FILE = "Innovation.db"
 
 
 if __name__ == "__main__":
     # Enter username and password here
-    __username__ = input("Enter username: ")
-    __password__ = getpass("Enter password: ")
-    __number_audio_you_wish__ = 2
-    __voice__ = ENGLISH[1]
-    __rate__ = 175  # Default is 200
-    # ---------------------------------------------
-    mod = pyttsx3.init()
-    mod.setProperty("voice", __voice__)
-    mod.setProperty("rate", __rate__)  # Default 200
-
+    __username__ = input('Enter username: ')
+    __password__ = getpass('Enter password: ')
     user = Memrise()
     user.login(__username__, __password__)
     course = user.select_course()
-    levels = course.levels()
-    tempFolder = tempfile.TemporaryDirectory()
-    for level in levels:
-        print(f"Retriveing the level name `{level.name}`")
-        words = level.get_words()
-        for idx in range(len(words)):
-            if words[idx].audio_count >= __number_audio_you_wish__:
-                continue
-            filename = concat(words[idx].text)
-            mod.save_to_file(
-                words[idx].text, f"{tempFolder.name}/{idx:02}_{filename}.mp3"
-            )
-            mod.runAndWait()
-            words[idx].upload_audio(f"{tempFolder.name}/{idx:02}_{filename}.mp3")
+    # df = pd.read_csv('vocabulary.csv',encoding='utf-16',sep='\t', header=None)
+    db = SQLite(f"{PATH}{FILE}")
+    df_topic = db.select_local_topic()  # id | topic
+    for idx in range(df_topic.shape[0]):
+        bulk = db.topic_to_bulk(int(df_topic[0][idx]))
+        status = course.add_level_with_bulk(df_topic[1][idx], bulk, "tab")
+        if status:
+            logging.warning(f"Successful to add level {df_topic[0][idx]}")
+            db.switch_status(str(df_topic[0][idx]))
+        else:
+            logging.warning(f"Failed to add level {df_topic[0][idx]}")
+    db.close()

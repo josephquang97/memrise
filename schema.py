@@ -356,53 +356,53 @@ class Course:
         level_list = LevelList(**data)
         return [Level(self.client, schema) for schema in level_list.levels]
 
+    def delete_level(self, level_id) -> None:
+        data = {"level_id": f"{level_id}"}
+        headers = {"Referer": f"https://app.memrise.com/course/{self.id}/edit/"}
+        self.client.post("/ajax/level/delete/", payload=data, headers=headers)
 
-    def delete_level(self,level_id) -> None:
-        data = {
-            'level_id': f'{level_id}'
-        }
-        headers = {'Referer': f'https://app.memrise.com/course/{self.id}/edit/'}
-        self.client.post('/ajax/level/delete/', payload = data, headers = headers)
-
-
-    def set_level_title(self, level_id: str, new_val: str, headers: Dict[str,str]) -> requests.Response:
-        payload = {
-            'level_id': f'{level_id}',
-            'new_val': new_val
-        }
-        res = self.client.post('/ajax/level/set_title/', payload=payload, headers=headers)
+    def set_level_title(
+        self, level_id: str, new_val: str, headers: Dict[str, str]
+    ) -> requests.Response:
+        payload = {"level_id": f"{level_id}", "new_val": new_val}
+        res = self.client.post(
+            "/ajax/level/set_title/", payload=payload, headers=headers
+        )
         return res
 
-    def add_bulk(self, level_id: str , bulk: str, sep: str , headers: Dict[str, str]) -> requests.Response:
+    def add_bulk(
+        self, level_id: str, bulk: str, sep: str, headers: Dict[str, str]
+    ) -> requests.Response:
         payload = {
-            "word_delimiter" : sep,
-            "data" : bulk,
+            "word_delimiter": sep,
+            "data": bulk,
             "level_id": level_id,
         }
-        response = self.client.post('/ajax/level/add_things_in_bulk/', payload=payload, headers=headers)
+        response = self.client.post(
+            "/ajax/level/add_things_in_bulk/", payload=payload, headers=headers
+        )
         return response
 
-
-    def add_level(self, name: str , bulk: str, sep: str) -> str:
+    def add_level(self, name: str, bulk: str, sep: str) -> str:
         """Add a new level in the course."""
         # Get the pool_id
-        res = self.client.session.get(f'{URL}/course/{self.id}/any/edit/')
-        soup = BeautifulSoup(res.content,'html.parser')
-        tag = soup.find('a',{"data-role":"level-add"})  
+        res = self.client.session.get(f"{URL}/course/{self.id}/any/edit/")
+        soup = BeautifulSoup(res.content, "html.parser")
+        tag = soup.find("a", {"data-role": "level-add"})
         data = {
-            'course_id': f'{self.id}',
-            'kind': 'things',
-            'pool_id': tag['data-pool-id']
-            }
-        headers = {'Referer': f'{res.url}'}
-        response = self.client.post('/ajax/level/add/', payload = data, headers = headers)
+            "course_id": f"{self.id}",
+            "kind": "things",
+            "pool_id": tag["data-pool-id"],
+        }
+        headers = {"Referer": f"{res.url}"}
+        response = self.client.post("/ajax/level/add/", payload=data, headers=headers)
 
         try:
             data = response.json()
         except json.decoder.JSONDecodeError as e:
             raise JSONParseError(f"Invalid JSON response for a GET request: {e}")
 
-        level_id = data["redirect_url"].split('_')[-1]
+        level_id = data["redirect_url"].split("_")[-1]
 
         response = self.set_level_title(level_id, name, headers)
         try:
@@ -411,13 +411,12 @@ class Course:
             raise JSONParseError(f"Invalid JSON response for a GET request: {e}")
         else:
             status = data["success"]
-            if status==False:
+            if status == False:
                 logging.warning(f"Failed to rename the level {level_id} to '{name}'")
-        
+
         response = self.add_bulk(level_id, bulk, sep, headers)
 
         return response
-
 
 
 @dataclass
