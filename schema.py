@@ -1,3 +1,4 @@
+from distutils.log import Log
 import pandas as pd
 from bs4 import BeautifulSoup
 from typing import List, Optional, Any, Dict, Tuple
@@ -5,46 +6,49 @@ from pydantic import BaseModel, HttpUrl
 from dataclasses import dataclass, field
 from memrise import transUntilDone
 from text2ipa import get_IPAs
+from pathlib import Path
 import requests, json, logging, re, pyttsx3, tempfile, sqlite3
 
 
 URL = "https://app.memrise.com"
 UPLOAD_PATH = "/ajax/thing/cell/upload_file/"
 DELETE_PATH = "/ajax/thing/column/delete_from/"
+# Rename = ""
 # COURSE = "https://app.memrise.com/v1.17/courses/{course_id}/"
 # LEVEL = "https://app.memrise.com/v1.17/courses/{course_id}/levels/"
 LANGUAGE = {
-    'en-gb' : [
+    "en-gb": [
         "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-GB_HAZEL_11.0"
     ],
-
-    'en' : [
+    "en": [
         "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0",
         "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_DAVID_11.0",
     ],
-
-    'fr' : [
+    "fr": [
         "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_FR-FR_HORTENSE_11.0",
         "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_V110_FR-FR_PAUL_11.0",
     ],
-
-    'jp' : [
+    "jp": [
         "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_JA-JP_HARUKA_11.0",
         "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_JA-JP_ICHIRO_11.0",
     ],
 }
 
-
-def concat(words: str):
-    mywords = re.findall("\\w+", words.lower())
-    retstr = ""
-    for myword in mywords:
-        retstr += myword[0].upper() + myword[1:]
-    return retstr
+TAG_XML = """<set xml=true><VOICE REQUIRED="NAME={name}"><rate speed="{speed}" ><silence msec="100"/>{text}<silence msec="100"/>"""
+CUSTOM = {
+    "en": [
+        # 'VW Bridget',
+        "VW Julie",
+        # 'VW Kate',
+        "VW Paul",
+    ],
+    "jp": ["VW Misaki"],
+}
 
 
 class InvalidSeperateElement(Exception):
     """Language is not supported ERROR"""
+
     def __init__(self, sep: str, message: str):
         self._sep = sep
         self._message = message
@@ -56,6 +60,7 @@ class InvalidSeperateElement(Exception):
 
 class UnSupportLanguage(Exception):
     """Language is not supported ERROR"""
+
     def __init__(self, language: str, message: str):
         self._language = language
         self._message = message
@@ -71,6 +76,7 @@ class LoginError(Exception):
 
 class AddLevelError(Exception):
     """Add Level Exception Handle"""
+
     def __init__(self, id: str, message: str):
         self._id = id
         self._message = message
@@ -82,6 +88,7 @@ class AddLevelError(Exception):
 
 class AddBulkError(Exception):
     """Add Bulk Exception Handle"""
+
     def __init__(self, id: str, message: str):
         self._id = id
         self._message = message
@@ -114,6 +121,29 @@ class InputOutOfRange(Exception):
 
     def __str__(self):
         return f"Input value: {self.option} -> {self.message}"
+
+
+def concat(words: str):
+    mywords = re.findall("\\w+", words.lower())
+    retstr = ""
+    for myword in mywords:
+        retstr += myword[0].upper() + myword[1:]
+    return retstr
+
+
+def custom_audio(language: str, text: str) -> None:
+    if language not in CUSTOM.keys():
+        raise UnSupportLanguage(language=language, message="Not support.")
+    else:
+        voices: List[str] = CUSTOM[language]
+
+    for voice in voices:
+        vname = voice.replace(" ", "")
+        filename = concat(text)
+        Path(f"./custom/{vname}/").mkdir(parents=True, exist_ok=True)
+        with open(f"./custom/{vname}/{filename}.txt", "w") as fp:
+            fp.seek(0)
+            fp.write(TAG_XML.format(name=voice, speed=-2, text=text))
 
 
 class Category(BaseModel):
@@ -400,7 +430,7 @@ class Level:
                     audio_count = int(numbers[-1])
                 except IndexError as e:
                     audio_count = 0
-                    print(f'Word `{learnable_text}`: 0 audios')
+                    print(f"Word `{learnable_text}`: 0 audios")
                     pass
             # Using the others instead ---------------------------------------------------------------
             learnables.append(
@@ -437,8 +467,9 @@ class Course:
         self.client.post("/ajax/level/delete/", payload=data, headers=headers)
 
     def set_level_title(
-        self, level_id: str, new_val: str, headers: Dict[str, str]
-    ) -> requests.Response:
+        self, level_id: str, new_val: str
+    ) -> bool:
+        headers: Dict[str, str] = {"Referer": f"https://app.memrise.com/course/{self.id}/edit/"}
         payload = {"level_id": f"{level_id}", "new_val": new_val}
         response = self.client.post(
             "/ajax/level/set_title/", payload=payload, headers=headers
@@ -452,7 +483,7 @@ class Course:
             status = data["success"]
             if status == False:
                 logging.warning(f"Failed to rename the level {level_id}")
-        return response
+        return status
 
     def add_bulk(
         self, level_id: str, bulk: str, sep: str, headers: Dict[str, str]
@@ -475,15 +506,51 @@ class Course:
         else:
             status = data["success"]
             if status == False:
-                raise AddBulkError(id=level_id, message="Failed to Add Bulk.")   
+                raise AddBulkError(id=level_id, message="Failed to Add Bulk.")
         return status
+
+    def move_level(self, index: int, index_new: int, custom: Dict[str, str] = {} ):
+        levels: List[Level] = self.levels()
+        orders: List[str] = [str(item.id) for item in levels]
+        if custom!={} :
+            for key,value in custom.items():
+                orders.insert(int(key)-1, value)
+        
+        level_id = orders[index-1]
+        orders.remove(level_id)
+        orders.insert(index_new-1, level_id)
+
+        payload: Dict[str, str] = {
+                "course_id" : f"{self.id}",
+                "level_ids" : json.dumps(orders)
+            }
+        headers: Dict[str, str] = {"Referer": f"https://app.memrise.com/course/{self.id}/edit/"}
+        try:
+            response = self.client.post(
+            "/ajax/course/reorder_levels/", payload=payload, headers=headers
+            )
+        except ConnectionError as e:
+            logging.warning(f"Failed to move the level. Must do it manually.")
+            status = False
+            
+        # Validation status change name
+        try:
+            data = response.json()
+        except json.decoder.JSONDecodeError as e:
+            raise JSONParseError(f"Invalid JSON response for a GET request: {e}")
+        else:
+            status = data["success"]
+            if status == False:
+                logging.warning(f"Failed to move the level {level_id} from {index} to {index_new}")
+        return status
+
 
     def add_level(self) -> Tuple[str, Dict[str, str]]:
         """Add a new level in the course."""
         # Get the pool_id
         res = self.client.session.get(f"{URL}/course/{self.id}/any/edit/")
         soup = BeautifulSoup(res.content, "html.parser")
-        tag = soup.find("div", {"class":"level collapsed"})
+        tag = soup.find("div", {"class": "level collapsed"})
         data = {
             "course_id": f"{self.id}",
             "kind": "things",
@@ -495,7 +562,10 @@ class Course:
         try:
             data = response.json()
         except json.decoder.JSONDecodeError as e:
-            raise AddLevelError(id=self.id, message=f"Invalid JSON response for a adding level request: {e}")
+            raise AddLevelError(
+                id=self.id,
+                message=f"Invalid JSON response for a adding level request: {e}",
+            )
         else:
             level_id = data["redirect_url"].split("_")[-1]
 
@@ -504,15 +574,17 @@ class Course:
     def add_level_with_bulk(self, name: str, bulk: str, sep: str) -> bool:
         """Add new level with bulk data."""
         # Validation for seperate parameter must be comma or tab
-        if sep not in ['\t', ',']:
-            raise InvalidSeperateElement(sep=sep,message="seperate paramater must be tab or comma.")
+        if sep not in ["\t", ","]:
+            raise InvalidSeperateElement(
+                sep=sep, message="seperate paramater must be tab or comma."
+            )
         else:
             word_delimiter = "tab" if sep == "\t" else "comma"
         # Part1: Add new level
-        level_id,headers = self.add_level()
+        level_id, headers = self.add_level()
 
         # Part2: Rename the level title
-        response = self.set_level_title(level_id, name, headers)
+        self.set_level_title(level_id, name)
 
         # Part3: Add bulk request
         try:
@@ -523,35 +595,43 @@ class Course:
             logging.warning(f"Failed to add level with bulk {level_id}: {e}")
         return status
 
-    def update_audio(self, language: str, speed: int = 170, output: bool = False):
-        if language not in LANGUAGE.keys() : 
+    def update_audio(self, language: str, speed: int = 170, custom: bool = False):
+        if language not in LANGUAGE.keys():
             raise UnSupportLanguage(
                 language=language,
-                message="Not support. Please download the new packages."
-                )
+                message="Not support. Please download the new packages.",
+            )
         else:
             voices: List[str] = LANGUAGE[language]
             __number_audio_you_wish__ = len(voices)
         # ---------------------------------------------
         mod = pyttsx3.init()
-        mod.setProperty("rate", speed) 
+        mod.setProperty("rate", speed)
         for voice in voices:
             mod.setProperty("voice", voice)
             levels = self.levels()
             tempFolder = tempfile.TemporaryDirectory()
             for level in levels:
-                if output: print(f"Retriveing the level name `{level.name}`")
+                print(f"Retriveing the level name `{level.name}`")
                 words = level.get_words()
                 for idx in range(len(words)):
                     if words[idx].audio_count >= __number_audio_you_wish__:
                         continue
                     filename = concat(words[idx].text)
-                    mod.save_to_file(
-                        words[idx].text, f"{tempFolder.name}/{idx:02}_{filename}.mp3"
-                    )
-                    mod.runAndWait()
-                    words[idx].upload_audio(f"{tempFolder.name}/{idx:02}_{filename}.mp3")
-
+                    if custom:
+                        voices: List[str] = CUSTOM[language]
+                        for voice in voices:
+                            vname = voice.replace(" ", "")
+                            words[idx].upload_audio(f"./custom/{vname}/{filename}.mp3")
+                    else:
+                        mod.save_to_file(
+                            words[idx].text,
+                            f"{tempFolder.name}/{idx:02}_{filename}.mp3",
+                        )
+                        mod.runAndWait()
+                        words[idx].upload_audio(
+                            f"{tempFolder.name}/{idx:02}_{filename}.mp3"
+                        )
 
 
 @dataclass
@@ -588,6 +668,7 @@ SENS_IN_TOPIC = (
 )
 UPDATE_STATUS = """UPDATE topic SET status = 'stream' WHERE id = ? ;"""
 
+
 @dataclass
 class SQLite:
     filename: str
@@ -613,7 +694,7 @@ class SQLite:
 
     def switch_status(self, topic_id: str):
         """Switch the status of the specific topic by id."""
-        self.cur.execute(UPDATE_STATUS,(topic_id,))
+        self.cur.execute(UPDATE_STATUS, (topic_id,))
         self.conn.commit()
 
     def update_ipas(self):
@@ -633,14 +714,20 @@ class SQLite:
         __df = pd.DataFrame(self.cur.fetchall())
         return __df
 
-    def topic_to_bulk(self, topic_id: int, sep = '\t') -> str:
+    def topic_to_bulk(
+        self, topic_id: int, sep="\t", custom: bool = False, language: str = ""
+    ) -> str:
         """Convert the content of topic to bulk text."""
         bulk: str = ""
         df = self.__select_sentense_in_topic(topic_id)
         for idx in range(df.shape[0]):
-            __learable = df[0][idx]
-            __meaning = df[1][idx]
-            __ipa = df[2][idx]
+            __learable: str = df[0][idx]
+            __meaning: str = df[1][idx]
+            __ipa: str = df[2][idx]
+            if custom:
+                if language == "":
+                    raise Exception("Missing language parameter.")
+                custom_audio(language, __learable.lower())
             bulk += f"{__learable}{sep}{__meaning}{sep}{__ipa}\n"
         return bulk
 
