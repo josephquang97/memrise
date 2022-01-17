@@ -1,3 +1,4 @@
+from distutils.log import Log
 import pandas as pd
 from bs4 import BeautifulSoup
 from typing import List, Optional, Any, Dict, Tuple
@@ -12,6 +13,7 @@ import requests, json, logging, re, pyttsx3, tempfile, sqlite3
 URL = "https://app.memrise.com"
 UPLOAD_PATH = "/ajax/thing/cell/upload_file/"
 DELETE_PATH = "/ajax/thing/column/delete_from/"
+# Rename = ""
 # COURSE = "https://app.memrise.com/v1.17/courses/{course_id}/"
 # LEVEL = "https://app.memrise.com/v1.17/courses/{course_id}/levels/"
 LANGUAGE = {
@@ -465,8 +467,9 @@ class Course:
         self.client.post("/ajax/level/delete/", payload=data, headers=headers)
 
     def set_level_title(
-        self, level_id: str, new_val: str, headers: Dict[str, str]
-    ) -> requests.Response:
+        self, level_id: str, new_val: str
+    ) -> bool:
+        headers: Dict[str, str] = {"Referer": f"https://app.memrise.com/course/{self.id}/edit/"}
         payload = {"level_id": f"{level_id}", "new_val": new_val}
         response = self.client.post(
             "/ajax/level/set_title/", payload=payload, headers=headers
@@ -480,7 +483,7 @@ class Course:
             status = data["success"]
             if status == False:
                 logging.warning(f"Failed to rename the level {level_id}")
-        return response
+        return status
 
     def add_bulk(
         self, level_id: str, bulk: str, sep: str, headers: Dict[str, str]
@@ -505,6 +508,42 @@ class Course:
             if status == False:
                 raise AddBulkError(id=level_id, message="Failed to Add Bulk.")
         return status
+
+    def move_level(self, index: int, index_new: int, custom: Dict[str, str] = {} ):
+        levels: List[Level] = self.levels()
+        orders: List[str] = [str(item.id) for item in levels]
+        if custom!={} :
+            for key,value in custom.items():
+                orders.insert(int(key)-1, value)
+        
+        level_id = orders[index-1]
+        orders.remove(level_id)
+        orders.insert(index_new-1, level_id)
+
+        payload: Dict[str, str] = {
+                "course_id" : f"{self.id}",
+                "level_ids" : json.dumps(orders)
+            }
+        headers: Dict[str, str] = {"Referer": f"https://app.memrise.com/course/{self.id}/edit/"}
+        try:
+            response = self.client.post(
+            "/ajax/course/reorder_levels/", payload=payload, headers=headers
+            )
+        except ConnectionError as e:
+            logging.warning(f"Failed to move the level. Must do it manually.")
+            status = False
+            
+        # Validation status change name
+        try:
+            data = response.json()
+        except json.decoder.JSONDecodeError as e:
+            raise JSONParseError(f"Invalid JSON response for a GET request: {e}")
+        else:
+            status = data["success"]
+            if status == False:
+                logging.warning(f"Failed to move the level {level_id} from {index} to {index_new}")
+        return status
+
 
     def add_level(self) -> Tuple[str, Dict[str, str]]:
         """Add a new level in the course."""
@@ -545,7 +584,7 @@ class Course:
         level_id, headers = self.add_level()
 
         # Part2: Rename the level title
-        response = self.set_level_title(level_id, name, headers)
+        self.set_level_title(level_id, name)
 
         # Part3: Add bulk request
         try:
