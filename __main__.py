@@ -1,27 +1,16 @@
-from schema import SQLite, Memrise
+from schema import Course, SQLite, Memrise
 import logging
 from getpass import getpass
 
-FILE = "course.db"
+FILE = "./course/course.db"
 
-if __name__ == "__main__":
-    # Enter username and password here
-    __username__ = input("Enter username: ")
-    __password__ = getpass("Enter password: ")
-
-    # Sign in Memrise
-    user = Memrise()
-    user.login(__username__, __password__)
-
-    # Choose the course
-    course = user.select_course()
-
+def sync_database(file: str, course: Course):
     # Read the database find the new levels
-    db = SQLite(f"./course/{FILE}")
-    
+    db = SQLite(file)
+
     # Select the local topics
     df_topic = db.select_local_topic()
-    
+
     # Retrieval all topics to convert to bulk
     # And then connect to MEMRISE add bulk to new level for each topic
     for idx in range(df_topic.shape[0]):
@@ -42,4 +31,21 @@ if __name__ == "__main__":
     db.close()
 
     # Update the audio for each levels
-    course.update_audio('en', output=True)
+    course.update_audio("en")
+
+def choose_course(username: str, password: str) -> Course:
+    # Sign in Memrise
+    user = Memrise()
+    user.login(username, password)
+
+    # Choose the course
+    course: Course = user.select_course()
+    return course
+
+if __name__ == "__main__":
+    # Enter username and password here
+    __username__ = input("Enter username: ")
+    __password__ = getpass("Enter password: ")
+
+    course = choose_course(__username__, __password__)
+    sync_database(FILE, course)
