@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import List
-from exception import LanguageError
+from ..exception import LanguageError
 import re
 import pyttsx3
 
