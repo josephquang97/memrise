@@ -1,234 +1,34 @@
 import pandas as pd
 from bs4 import BeautifulSoup
 from typing import List, Optional, Any, Dict, Tuple
-from pydantic import BaseModel, HttpUrl
 from dataclasses import dataclass, field
 from memrise import transUntilDone
 from text2ipa import get_IPAs
-from pathlib import Path
 import requests
 import json
 import logging
 import re
-import pyttsx3
 import tempfile
 import sqlite3
+from .schema import CourseList, LevelSchema, EditLevel, CourseSchema, LevelList
+from .exception import (
+    InvalidSeperateElement,
+    LanguageError,
+    LoginError,
+    AddLevelError,
+    AddBulkError,
+    ConnectionError,
+    JSONParseError,
+    InputOutOfRange,
+)
+from .text2speech import concat, external_generate_audio, generate_audio, CUSTOM
 
 
+# COURSE = "https://app.memrise.com/v1.17/courses/{course_id}/"
+# LEVEL = "https://app.memrise.com/v1.17/courses/{course_id}/levels/"
 URL = "https://app.memrise.com"
 UPLOAD_PATH = "/ajax/thing/cell/upload_file/"
 DELETE_PATH = "/ajax/thing/column/delete_from/"
-# Rename = ""
-# COURSE = "https://app.memrise.com/v1.17/courses/{course_id}/"
-# LEVEL = "https://app.memrise.com/v1.17/courses/{course_id}/levels/"
-
-VOICE_N = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\Voices\\Tokens\\{name}"
-
-LANGUAGE = {
-    "en-gb": [VOICE_N.format(name="TTS_MS_EN-GB_HAZEL_11.0")],
-    "en": [
-        VOICE_N.format(name="TTS_MS_EN-US_ZIRA_11.0"),
-        VOICE_N.format(name="TTS_MS_EN-US_DAVID_11.0"),
-    ],
-    "fr": [
-        VOICE_N.format(name="TTS_MS_FR-FR_HORTENSE_11.0"),
-        VOICE_N.format(name="TTS_V110_FR-FR_PAUL_11.0"),
-    ],
-    "jp": [
-        VOICE_N.format(name="TTS_MS_JA-JP_HARUKA_11.0"),
-        VOICE_N.format(name="TTS_MS_JA-JP_ICHIRO_11.0"),
-    ],
-}
-
-TAG_XML = """<VOICE REQUIRED="NAME={name}">
-<rate speed="{speed}" >
-<silence msec="100"/>{text}<silence msec="100"/>
-</rate>
-</VOICE>
-"""
-CUSTOM = {
-    "en": [
-        # 'VW Bridget',
-        "VW Julie",
-        # 'VW Kate',
-        "VW Paul",
-    ],
-    "jp": ["VW Misaki"],
-}
-
-
-class InvalidSeperateElement(Exception):
-    """Language is not supported ERROR"""
-
-    def __init__(self, sep: str, message: str):
-        self._sep = sep
-        self._message = message
-        super().__init__(self._message)
-
-    def __str__(self):
-        return f"sep = {self._sep} : {self._message}"
-
-
-class UnSupportLanguage(Exception):
-    """Language is not supported ERROR"""
-
-    def __init__(self, language: str, message: str):
-        self._language = language
-        self._message = message
-        super().__init__(self._message)
-
-    def __str__(self):
-        return f"Language {self._language} : {self._message}"
-
-
-class LoginError(Exception):
-    ...
-
-
-class AddLevelError(Exception):
-    """Add Level Exception Handle"""
-
-    def __init__(self, id: str, message: str):
-        self._id = id
-        self._message = message
-        super().__init__(self._message)
-
-    def __str__(self):
-        return f"Course ID {self._id} : {self._message}"
-
-
-class AddBulkError(Exception):
-    """Add Bulk Exception Handle"""
-
-    def __init__(self, id: str, message: str):
-        self._id = id
-        self._message = message
-        super().__init__(self._message)
-
-    def __str__(self):
-        return f"Add Bulk Error Item ID {self._id}: {self._message}"
-
-
-class ConnectionError(Exception):
-    ...
-
-
-class JSONParseError(Exception):
-    ...
-
-
-class InputOutOfRange(Exception):
-    """Exception raised for errors in the input option which's out of range.
-
-    Attributes:
-        input value -- the number input option
-        message -- explanation of the error
-    """
-
-    def __init__(self, option: int, message: str):
-        self.option = option
-        self.message = message
-        super().__init__(self.message)
-
-    def __str__(self):
-        return f"Input value: {self.option} -> {self.message}"
-
-
-def concat(words: str):
-    mywords = re.findall("\\w+", words.lower())
-    retstr = ""
-    for myword in mywords:
-        retstr += myword[0].upper() + myword[1:]
-    return retstr
-
-
-def custom_audio(language: str, text: str) -> None:
-    if language not in CUSTOM.keys():
-        raise UnSupportLanguage(language=language, message="Not support.")
-    else:
-        voices: List[str] = CUSTOM[language]
-
-    for voice in voices:
-        vname = voice.replace(" ", "")
-        filename = concat(text)
-        Path(f"./custom/{vname}/").mkdir(parents=True, exist_ok=True)
-        with open(f"./custom/{vname}/{filename}.txt", "w") as fp:
-            fp.seek(0)
-            fp.write(TAG_XML.format(name=voice, speed=-2, text=text))
-
-
-class Category(BaseModel):
-    name: str
-    photo: HttpUrl
-
-
-class Language(BaseModel):
-    """Memrise course language."""
-
-    id: int
-    slug: str
-    name: str
-    photo: HttpUrl
-    parent_id: int
-    index: int
-    language_code: str
-
-
-class CourseSchema(BaseModel):
-    """Memrise course schema."""
-
-    id: int
-    name: str
-    slug: str
-    url: str
-    description: str
-    photo: HttpUrl
-    photo_small: HttpUrl
-    photo_large: HttpUrl
-    num_things: int
-    num_levels: int
-    num_learners: int
-    source: Language
-    target: Language
-    learned: int
-    review: int
-    ignored: int
-    ltm: int
-    difficult: int
-    category: Category
-    percent_complete: int
-
-
-class CourseList(BaseModel):
-    courses: List[CourseSchema]
-    to_review_total: int
-    has_more_courses: bool
-
-
-class EditLevel(BaseModel):
-    """Learnable is present for vocabulary"""
-
-    success: bool
-    rendered: str
-
-
-class LevelSchema(BaseModel):
-    """Level schema"""
-
-    id: int
-    index: int
-    kind: int
-    title: str
-    pool_id: int
-    course_id: int
-    learnable_ids: List[int]
-
-
-class LevelList(BaseModel):
-    """List of level schema"""
-
-    levels: List[LevelSchema]
-    version: str
 
 
 @dataclass
@@ -237,7 +37,8 @@ class Client:
     password: str = field(init=False)
     session: requests.Session = requests.Session()
 
-    def login(self, username, password):
+    def login(self, username, password) -> bool:
+        status: bool = False
         try:
             res = self.session.get(f"{URL}/login/", timeout=30)
         except requests.RequestException as e:
@@ -267,6 +68,10 @@ class Client:
                 raise LoginError(f"Authentication failed: {e}")
             else:
                 raise LoginError(f"Unexpected response during login: {e}")
+        else:
+            status = True
+
+        return status
 
     def courses(self):
         """Retrieve the courses to which the logged in user has edit permissions."""
@@ -345,11 +150,23 @@ class Word:
         if isinstance(audio, str):
             with open(audio, "rb") as fp:
                 files = {"f": ("audio.mp3", fp.read(), "audio/mp3")}
+
+            self.__upload_file(files)
+
+        elif isinstance(audio, list):
+            for file in audio:
+                with open(file, "rb") as fp:
+                    files = {"f": ("audio.mp3", fp.read(), "audio/mp3")}
+
+                self.__upload_file(files)
+
         elif isinstance(audio, bytes):
             files = {"f": ("audio.mp3", audio, "audio/mp3")}
+
         else:
             raise TypeError(f"Expected 'str' or 'bytes', but {type(audio)}")
 
+    def __upload_file(self, files):
         payload = {
             "thing_id": self.id,
             "cell_id": self.audio_col,
@@ -393,17 +210,6 @@ class Level:
         self.id = self.schema.id
         self.name = self.schema.title
 
-    # @dataclass
-    # class Level:
-    # 	client: Client
-    # 	schema: LevelSchema
-    # 	id: int = field(init = False)
-    # 	name: str = field(init = False)
-
-    #     def __post_init__(self):
-    #         self.id = self.schema.id
-    #         self.name = self.schema.title
-
     def get_words(self) -> List[Word]:
         """Retrieve learnables in a level."""
         data = self.client.get(f"/ajax/level/editing_html/?level_id={self.id}")
@@ -413,24 +219,6 @@ class Level:
         """Parse learnables (words) from Memrise API response."""
         level: EditLevel = EditLevel(**data)
         learnables: List[Word] = []
-
-        # from lxml import html
-        # tree = html.fromstring(level.rendered)
-        # learnables_html = tree.xpath("//tr[contains(@class, 'thing')]")
-        # for learnable in learnables_html:
-        #     learnable_id = learnable.attrib["data-thing-id"]
-        #     try:
-        #         learnable_text = learnable.xpath("td[2]/div/div/text()")[0]
-        # column_number = learnable.xpath("td[contains(@class, 'audio')]/@data-key")[0]
-        #     except IndexError:
-        #         logging.warning("Failed to parse learnable id %s", learnable_id)
-        #         continue
-        #     audio_count = len(
-        #         learnable.xpath(
-        # "td[contains(@class, 'audio')]/div/div[contains(@class, 'dropdown-menu')]/div"
-        #         )
-        #     )
-        # ---------------------------------------------------------------------------------------
         soup = BeautifulSoup(level.rendered, "html.parser")
         tags = soup("tr", {"class": "thing"})
         column_number = soup.find("th", {"class": "column audio"})["data-key"]
@@ -616,7 +404,7 @@ class Course:
 
     def _update_audio_external(self, language):
         if language not in CUSTOM.keys():
-            raise UnSupportLanguage(
+            raise LanguageError(
                 language=language,
                 message="Not support. Please download the new packages.",
             )
@@ -631,39 +419,26 @@ class Course:
                     if words[idx].audio_count < naudios:
                         filename = concat(words[idx].text)
                         vname = voice.replace(" ", "")
-                        words[idx].upload_audio(f"./custom/{vname}/{filename}.mp3")
+                        words[idx].upload_audio(f"./audio/{vname}/{filename}.mp3")
 
-    def update_audio(self, language: str, speed: int = 170, custom: bool = False):
-        if language not in LANGUAGE.keys():
-            raise UnSupportLanguage(
-                language=language,
-                message="Not support. Please download the new packages.",
-            )
-        else:
-            voices: List[str] = LANGUAGE[language]
-        # pyttsx3 - SETUP Part
-        naudios = len(voices)
-        mod = pyttsx3.init()
-        mod.setProperty("rate", speed)
-        # Audio generate & upload part
-        for voice in voices:
-            mod.setProperty("voice", voice)
-            levels = self.levels()
-            tempFolder = tempfile.TemporaryDirectory()
-            for level in levels:
-                print(f"Retriveing the level name `{level.name}`")
-                words = level.get_words()
-                for idx in range(len(words)):
-                    if words[idx].audio_count < naudios:
-                        filename = concat(words[idx].text)
-                        mod.save_to_file(
-                            words[idx].text,
-                            f"{tempFolder.name}/{idx:02}_{filename}.mp3",
-                        )
-                        mod.runAndWait()
-                        words[idx].upload_audio(
-                            f"{tempFolder.name}/{idx:02}_{filename}.mp3"
-                        )
+    def update_audio(self, language: str, speed: int = 170):
+        levels = self.levels()
+        tempFolder = tempfile.TemporaryDirectory()
+        for level_idx in range(len(levels)):
+            words = levels[level_idx].get_words()
+            for idx in range(len(words)):
+                try:
+                    files = generate_audio(
+                        text=words[idx].text,
+                        path=tempFolder.name,
+                        language=language,
+                        speed=speed,
+                    )
+                except LanguageError:
+                    files = generate_audio(
+                        text=words[idx].text, path=tempFolder.name, speed=speed
+                    )
+                words[idx].upload_audio(files)
 
 
 @dataclass
@@ -759,7 +534,7 @@ class SQLite:
             if custom:
                 if language == "":
                     raise Exception("Missing language parameter.")
-                custom_audio(language, __learable.lower())
+                external_generate_audio(language, __learable.lower())
             bulk += f"{__learable}{sep}{__meaning}{sep}{__ipa}\n"
         return bulk
 

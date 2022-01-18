@@ -16,7 +16,7 @@ def test_version():
 #     username: str = field(init=False)
 #     password: str = field(init=False)
 #     session: requests.Session = requests.Session()
-	
+
 # 	def login(self, username, password): ...
 # 	def courses(self): ...
 # 	def get(self, path: str, params: Optional[Dict[str, Any]] = None): ...
@@ -27,8 +27,8 @@ def test_version():
 #         headers: Dict[str, str],
 #         files: Optional[Dict[str, Tuple[str, bytes, str]]] = None,
 #     ) -> requests.Response: ...
-	
-	
+
+
 # @dataclass
 # class Word:
 #     id: int
@@ -46,7 +46,7 @@ def test_version():
 # 	schema: LevelSchema
 # 	id: int
 # 	name: str
-	
+
 # 	def __post_init__(self):
 # 		self.id = self.schema.id
 # 		self.name = self.schema.title
@@ -58,9 +58,9 @@ def test_version():
 #         self.name = self.schema.title
 
 #     def get_words(self) -> List[Word]: ...
-	
+
 # 	def __parse_words(self, data: Dict[str, Any]) -> List[Word]: ...
-	
+
 # @dataclass
 # class Course:
 #     def __init__(self, client: Client, schema: CourseSchema):

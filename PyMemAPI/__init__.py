@@ -1,4 +1,4 @@
-from .schema import Course, SQLite, Memrise
+from .PyMemAPI import Course, SQLite, Memrise
 
 
 __version__ = "0.1.0"
