@@ -23,8 +23,14 @@ class LanguageError(Exception):
 
 
 class LoginError(Exception):
-    ...
+    """Username or Password is incorrect."""
 
+    def __init__(self, message: str):
+        self._message = message
+        super().__init__(self._message)
+
+    def __str__(self):
+        return f"Failed to Login: {self._message}"
 
 class AddLevelError(Exception):
     """Add Level Exception Handle"""

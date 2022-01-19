@@ -1,13 +1,30 @@
 from PyMemAPI import __version__
 from PyMemAPI import Memrise, SQLite, Course
-
+from PyMemAPI.exception import LoginError
+import unittest
+import io
 
 def test_version():
     assert __version__ == "0.1.0"
 
 
 # Test Memrise features
+class TestMemrise(unittest.TestCase):
+    def test_login_fail(self):
+        with self.assertRaises(LoginError):
+            cli = Memrise()
+            cli.login('testingerror','nopassword')
 
+    def test_login_success(self):
+        cli = Memrise()
+        self.assertTrue(cli.login('dummy_user','testing2022'))
+
+    def test_select_course(self):
+        cli = Memrise()
+        cli.login('dummy_user','testing2022')
+        mock_stdin('1')
+        course = cli.select_course()
+        self.assertEqual(course.name,"Testing Course")
 
 # Unit test for Course
 

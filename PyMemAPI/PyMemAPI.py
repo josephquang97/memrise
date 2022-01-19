@@ -4,6 +4,7 @@ from typing import List, Optional, Any, Dict, Tuple
 from dataclasses import dataclass, field
 from memrise import transUntilDone
 from text2ipa import get_IPAs
+from getpass import getpass
 import requests
 import json
 import logging
@@ -37,8 +38,11 @@ class Client:
     password: str = field(init=False)
     session: requests.Session = requests.Session()
 
-    def login(self, username, password) -> bool:
+    def login(self, username: Optional[str] = "", password: Optional[str] = "") -> bool:
         status: bool = False
+        if username == "" or password == "":
+            username = input("Enter username: ")
+            password = getpass("Enter password: ")
         try:
             res = self.session.get(f"{URL}/login/", timeout=30)
         except requests.RequestException as e:
@@ -443,7 +447,7 @@ class Course:
 
 @dataclass
 class Memrise(Client):
-    def select_course(self):
+    def select_course(self) -> Course:
         courses = self.courses()
         print("All courses: ")
         for indx in range(1, 1 + len(courses)):

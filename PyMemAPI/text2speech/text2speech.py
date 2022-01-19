@@ -56,11 +56,9 @@ def external_generate_audio(language: str, text: str) -> None:
             fp.write(TAG_XML.format(name=voice, speed=-2, text=text))
 
 
-ENGINE = pyttsx3.init()
-VOICES = ENGINE.getProperty("voices")
-
-
 def info_voice() -> None:
+    ENGINE = pyttsx3.init()
+    VOICES = ENGINE.getProperty("voices")
     print("All avaiable voices:")
     for idx in range(len(VOICES)):
         print(f"{idx+1}. {VOICES[idx].name}")
@@ -72,6 +70,8 @@ def input_voice(message: str):
 
 
 def choose_voices() -> List[str]:
+    ENGINE = pyttsx3.init()
+    VOICES = ENGINE.getProperty("voices")
     number_str = input("Enter the number of voices you wish: ")
     number = int(number_str)
     voices: List[str] = []
@@ -87,6 +87,8 @@ def generate_audio(
 ) -> List[str]:
     voices: List[str] = []
     files: List[str] = []
+    ENGINE = pyttsx3.init()
+    VOICES = ENGINE.getProperty("voices")
     if language != "":
         if language not in LANGUAGE.keys():
             raise LanguageError(language=language, message="Not support.")

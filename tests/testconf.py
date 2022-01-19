@@ -1,5 +1,5 @@
 import pytest
-
+import io
 # import tempfile
 import sqlite3
 
@@ -131,3 +131,8 @@ def cursor(filename):
     conn = sqlite3.Connection(filename)
     cur = conn.cursor()
     yield cur
+
+
+@pytest.fixture
+def mock_stdin(content,monkeypatch):
+	monkeypatch.setattr('sys.stdin',io.StringIO(content))
