@@ -48,8 +48,9 @@ testpaths = [
     "tests",
 ]
 filterwarnings = [
-    "error",
+    #"error",
     "ignore::DeprecationWarning",
+    #"ignore::PytestUnraisableExceptionWarning"
 ]
 
 

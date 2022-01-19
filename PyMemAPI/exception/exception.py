@@ -1,13 +1,13 @@
 class InvalidSeperateElement(Exception):
-    """Language is not supported ERROR"""
+    """Seperate Item is invalid"""
 
     def __init__(self, sep: str, message: str):
         self._sep = sep
         self._message = message
         super().__init__(self._message)
 
-    def __str__(self):
-        return f"sep = {self._sep} : {self._message}"
+    # def __str__(self):
+    #     return f"sep = {self._sep} : {self._message}"
 
 
 class LanguageError(Exception):
@@ -18,8 +18,8 @@ class LanguageError(Exception):
         self._message = message
         super().__init__(self._message)
 
-    def __str__(self):
-        return f"Language {self._language} : {self._message}"
+    # def __str__(self):
+    #     return f"Language {self._language} : {self._message}"
 
 
 class LoginError(Exception):
@@ -29,8 +29,9 @@ class LoginError(Exception):
         self._message = message
         super().__init__(self._message)
 
-    def __str__(self):
-        return f"Failed to Login: {self._message}"
+    # def __str__(self):
+    #     return f"Failed to Login: {self._message}"
+
 
 class AddLevelError(Exception):
     """Add Level Exception Handle"""
@@ -40,8 +41,8 @@ class AddLevelError(Exception):
         self._message = message
         super().__init__(self._message)
 
-    def __str__(self):
-        return f"Course ID {self._id} : {self._message}"
+    # def __str__(self):
+    #     return f"Course ID {self._id} : {self._message}"
 
 
 class AddBulkError(Exception):
@@ -52,8 +53,8 @@ class AddBulkError(Exception):
         self._message = message
         super().__init__(self._message)
 
-    def __str__(self):
-        return f"Add Bulk Error Item ID {self._id}: {self._message}"
+    # def __str__(self):
+    #     return f"Add Bulk Error Item ID {self._id}: {self._message}"
 
 
 class ConnectionError(Exception):
@@ -77,5 +78,5 @@ class InputOutOfRange(Exception):
         self.message = message
         super().__init__(self.message)
 
-    def __str__(self):
-        return f"Input value: {self.option} -> {self.message}"
+    # def __str__(self):
+    #     return f"Input value: {self.option} -> {self.message}"

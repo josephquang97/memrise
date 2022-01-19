@@ -78,30 +78,42 @@ def choose_voices() -> List[str]:
     info_voice()
     for idx in range(number):
         num = input_voice(f"Choose the voice number {idx+1}: ")
-        voices.append(VOICES[num])
+        voices.append(VOICES[num].id)
     return voices
 
 
 def generate_audio(
-    text: str, path: str, language: str = "", speed: int = 170, voice: List[int] = []
+    text: str, path: str, language: str = "", speed: int = 170
 ) -> List[str]:
     voices: List[str] = []
     files: List[str] = []
     ENGINE = pyttsx3.init()
-    VOICES = ENGINE.getProperty("voices")
     if language != "":
         if language not in LANGUAGE.keys():
             raise LanguageError(language=language, message="Not support.")
         voices = LANGUAGE[language]
-    elif len(voice) < 1:
-        voices = choose_voices()
-    else:
-        for idx in voice:
-            voices.append(VOICES[idx].id)
+
     for v in voices:
-        ENGINE.setProperty(v)
-        file = concat(f"{text}{voice}")
-        ENGINE.save_to_file(text, f"{path}/{file}")
-        files.append(f"{path}/{file}")
+        ENGINE.setProperty("voice", v)
+        file = concat(f"{text}{v}")
+        ENGINE.save_to_file(text, f"{path}/{file}.mp3")
+        files.append(f"{path}/{file}.mp3")
+        ENGINE.runAndWait()
+
+    return files
+
+
+def generate_audio_except(
+    text: str, path: str, voices: List[str], speed: int = 170
+) -> List[str]:
+    files: List[str] = []
+    ENGINE = pyttsx3.init()
+
+    for v in voices:
+        ENGINE.setProperty("voice", v)
+        file = concat(f"{text}{v}")
+        ENGINE.save_to_file(text, f"{path}/{file}.mp3")
+        files.append(f"{path}/{file}.mp3")
+        ENGINE.runAndWait()
 
     return files

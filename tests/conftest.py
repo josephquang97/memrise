@@ -1,9 +1,8 @@
-import pytest
-import io
-# import tempfile
 import sqlite3
-
-COMMAND = """
+import pytest
+@pytest.fixture(scope="session")  
+def cmd():
+	COMMAND = """
 DROP TABLE IF EXISTS "sentense" ;
 DROP TABLE IF EXISTS "topic"  ;
 
@@ -61,11 +60,11 @@ INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic
 INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('I''ve READ this BOOK a THOUSAND times.', 'tôi đã đọc cuốn sách này một ngàn lần.', 'aɪv rid ðɪs bʊk ə ˈθaʊzənd taɪmz.', 'true', 'true', '3');
 INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('you MUST wear a MASK at ALL times inside the SCHOOL.', 'bạn phải đeo mặt nạ mọi lúc trong trường.', 'ju mʌst wɛr ə mæsk æt ɔl taɪmz ɪnˈsaɪd ðə skul.', 'true', 'true', '3');
 INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('DON''T doubt yourself.', 'đừng nghi ngờ chính mình.', 'doʊnt daʊt jərˈsɛlf.', 'true', 'true', '4');
-INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('if you don''t ASK, you won''t GET.', 'nếu bạn không hỏi, bạn sẽ không nhận được.', 'ɪf ju doʊnt æsk, ju woʊnt gɛt.', 'true', 'true', '4');
+INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('if you don''t ASK, you won''t GET.', 'nếu bạn không hỏi, bạn sẽ không nhận được.', 'ɪf ju doʊnt æsk, ju woʊnt gɛt.', 'true', 'true', '4');
 INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('you know MORE than you THINK you do.', 'bạn biết nhiều hơn bạn nghĩ bạn làm.', 'ju noʊ mɔr ðæn ju θɪŋk ju du.', 'true', 'true', '4');
 INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('ACCEPT who you ARE.', 'chấp nhận bạn là ai.', 'ækˈsɛpt hu ju ɑr.', 'true', 'true', '4');
-INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('it''s not the MOUNTAIN we conquer, but OURSELVES.', 'đó không phải là ngọn núi chúng tôi chinh phục, mà là chính chúng ta.', 'ɪts nɑt ðə ˈmaʊntən wi ˈkɑŋkər, bʌt aʊərˈsɛlvz.', 'true', 'true', '4');
-INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('when you have CONFIDENCE, you can do ANYTHING.', 'khi bạn có sự tự tin, bạn có thể làm bất cứ điều gì.', 'wɛn ju hæv ˈkɑnfədəns, ju kæn du ˈɛniˌθɪŋ.', 'true', 'true', '4');
+INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('it''s not the MOUNTAIN we conquer, but OURSELVES.', 'đó không phải là ngọn núi chúng tôi chinh phục, mà là chính chúng ta.', 'ɪts nɑt ðə ˈmaʊntən wi ˈkɑŋkər, bʌt aʊərˈsɛlvz.', 'true', 'true', '4');
+INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('when you have CONFIDENCE, you can do ANYTHING.', 'khi bạn có sự tự tin, bạn có thể làm bất cứ điều gì.', 'wɛn ju hæv ˈkɑnfədəns, ju kæn du ˈɛniˌθɪŋ.', 'true', 'true', '4');
 INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('the most BEAUTIFUL thing you can WEAR is CONFIDENCE.', 'điều đẹp nhất bạn có thể mặc là sự tự tin.', 'ðə moʊst ˈbjutəfəl θɪŋ ju kæn wɛr ɪz ˈkɑnfədəns.', 'true', 'true', '4');
 INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('check it OUT if you WANT to.', 'kiểm tra xem nếu bạn muốn.', 'ʧɛk ɪt aʊt ɪf ju wɑnt tu.', 'true', 'true', '5');
 INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('I''d LOVE to GO there someday.', 'tôi muốn đến đó một ngày nào đó.', 'aɪd lʌv tu goʊ ðɛr ˈsʌmˌdeɪ.', 'true', 'true', '5');
@@ -117,22 +116,17 @@ INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic
 INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('It COULDN''T have been BETTER.', 'KHÔNG THỂ tốt HƠN được nữa.', 'ɪt ˈkʊdənt hæv bɪn ˈbɛtər.', 'false', 'false', '14');
 INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('SORRY to BOTHER you again.', 'XIN LỖI đã LÀM PHIỀN bạn lần nữa.', 'ˈsɑri tu ˈbɑðər ju əˈgɛn.', 'false', 'false', '14');
 INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('We''ve been WAITING for an HOUR.', 'Chúng tôi đã ĐỢI cả TIẾNG rồi.', 'wiv bɪn ˈweɪtɪŋ fɔr ən ˈaʊər.', 'false', 'false', '14');
-INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('that sounds GOOD, but I''m NOT SURE.', 'Nghe có vẻ HAY, nhưng tao cũng KHÔNG CHẮC CHẮN.', 'ðæt saʊndz gʊd, bʌt aɪm nɑt ʃʊr.', 'false', 'false', '15');
+INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('that sounds GOOD, but I''m NOT SURE.', 'Nghe có vẻ HAY, nhưng tao cũng KHÔNG CHẮC CHẮN.', 'ðæt saʊndz gʊd, bʌt aɪm nɑt ʃʊr.', 'false', 'false', '15');
 INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('they''ll TELL us by the END of the WEEK.', 'Họ sẽ trả lời chúng tôi vào CUỐI tuần này.', 'ðeɪl tɛl ʌs baɪ ði ɛnd ʌv ðə wik.', 'false', 'false', '15');
 INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('It LOOKS like it MIGHT RAIN.', 'Có vẻ trời SẮP MƯA.', 'ɪt lʊks laɪk ɪt maɪt reɪn.', 'false', 'false', '15');
 INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('I''ve KNOWN her for a LONG TIME.', 'tôi BIẾT cô ấy LÂU LẮM rồi.', 'aɪv noʊn hɜr fɔr ə lɔŋ taɪm.', 'false', 'false', '15');
 INSERT INTO "sentense" ("sentense", "meaning", "ipa", "audio1", "audio2", "topic_id") VALUES ('I CAN''T TELL if I''m SICK.', 'Tôi KHÔNG CHẮC liệu rằng tôi có BỆNH KHÔNG.', 'aɪ kænt tɛl ɪf aɪm sɪk.', 'false', 'false', '15');
-
-"""
-
-
-@pytest.fixture
-def cursor(filename):
-    conn = sqlite3.Connection(filename)
-    cur = conn.cursor()
-    yield cur
+""" 
+	yield COMMAND
 
 
-@pytest.fixture
-def mock_stdin(content,monkeypatch):
-	monkeypatch.setattr('sys.stdin',io.StringIO(content))
+#Conf for testing database connection
+@pytest.fixture(scope="session")  
+def db_conn():
+    with sqlite3.Connection("./course/course.db") as conn:
+    	yield conn

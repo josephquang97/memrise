@@ -22,15 +22,29 @@ from .exception import (
     JSONParseError,
     InputOutOfRange,
 )
-from .text2speech import concat, external_generate_audio, generate_audio, CUSTOM
+from .text2speech import concat, external_generate_audio, generate_audio, choose_voices, generate_audio_except, CUSTOM
 
 
 # COURSE = "https://app.memrise.com/v1.17/courses/{course_id}/"
 # LEVEL = "https://app.memrise.com/v1.17/courses/{course_id}/levels/"
+# Constants
 URL = "https://app.memrise.com"
 UPLOAD_PATH = "/ajax/thing/cell/upload_file/"
 DELETE_PATH = "/ajax/thing/column/delete_from/"
 
+INSERT_STATEMENT = (
+    """INSERT INTO "sentense" ("sentense", "meaning", "topic") VALUES (?, ?, ?);"""
+)
+SELECT_NULL_MEANING = """SELECT "sentense" FROM sentense WHERE meaning is NULL;"""
+SELECT_NULL_IPA = """SELECT "sentense" FROM sentense WHERE ipa is NULL;"""
+UPDATE_MEANING = """UPDATE sentense SET meaning = ? WHERE sentense = ? ;"""
+UPDATE_IPA = """UPDATE sentense SET ipa = ? WHERE sentense = ? ;"""
+TOPIC_LOCAL = """SELECT id, name FROM topic WHERE status = 'local';"""
+TOPIC_STREAM = """SELECT id, name FROM topic WHERE status = 'stream';"""
+SENS_IN_TOPIC = (
+    """SELECT "sentense", "meaning", "ipa" FROM "sentense" WHERE topic_id = ? ;"""
+)
+UPDATE_STATUS = """UPDATE topic SET status = 'stream' WHERE id = ? ;"""
 
 @dataclass
 class Client:
@@ -267,10 +281,21 @@ class Course:
         level_list = LevelList(**data)
         return [Level(self.client, schema) for schema in level_list.levels]
 
-    def delete_level(self, level_id) -> None:
+    def delete_all_level(self):
+        levels: List[Level] = self.levels()
+        success: bool = True
+        for level in levels:
+            success = success and self.delete_level(level.id)
+        return success
+    
+    def delete_level(self, level_id) -> bool:
+        status: bool = False
         data = {"level_id": f"{level_id}"}
         headers = {"Referer": f"https://app.memrise.com/course/{self.id}/edit/"}
-        self.client.post("/ajax/level/delete/", payload=data, headers=headers)
+        response = self.client.post("/ajax/level/delete/", payload=data, headers=headers)
+        data = response.json()
+        status = data["success"]
+        return status
 
     def set_level_title(self, level_id: str, new_val: str) -> bool:
         headers: Dict[str, str] = {
@@ -428,6 +453,7 @@ class Course:
     def update_audio(self, language: str, speed: int = 170):
         levels = self.levels()
         tempFolder = tempfile.TemporaryDirectory()
+        __voices__ : List[str] = []
         for level_idx in range(len(levels)):
             words = levels[level_idx].get_words()
             for idx in range(len(words)):
@@ -439,10 +465,44 @@ class Course:
                         speed=speed,
                     )
                 except LanguageError:
-                    files = generate_audio(
-                        text=words[idx].text, path=tempFolder.name, speed=speed
+                    if len(__voices__) < 1:
+                        __voices__ = choose_voices()
+                    files = generate_audio_except(
+                        text=words[idx].text,
+                        path=tempFolder.name,
+                        voices=__voices__,
+                        speed=speed
                     )
                 words[idx].upload_audio(files)
+
+    def sync_database(self, file: str):
+        # Read the database find the new levels
+        db = SQLite(file)
+
+        # Select the local topics
+        df_topic = db.select_local_topic()
+
+        # Retrieval all topics to convert to bulk
+        # And then connect to MEMRISE add bulk to new level for each topic
+        for idx in range(df_topic.shape[0]):
+            sep = "\t"
+            # Get topic id & name
+            topic_id = int(df_topic[0][idx])
+            topic_name = df_topic[1][idx]
+            # Streaming data
+            bulk = db.topic_to_bulk(topic_id, sep)
+            status = self.add_level_with_bulk(topic_name, bulk, sep)
+            # Validate the status
+            if status:
+                logging.Logger(f"Successful to add level {topic_id}")
+                db.switch_status(str(df_topic[0][idx]))
+            else:
+                logging.warning(f"Failed to add level {topic_id}")
+        # Close the database
+        db.close()
+
+        # Update the audio for each levels
+        self.update_audio("en")
 
 
 @dataclass
@@ -463,21 +523,6 @@ class Memrise(Client):
                 indx_choice, f"Your choice out of range [1,{len(courses)}]"
             )
         return courses[indx_choice - 1]
-
-
-INSERT_STATEMENT = (
-    """INSERT INTO "sentense" ("sentense", "meaning", "topic") VALUES (?, ?, ?);"""
-)
-SELECT_NULL_MEANING = """SELECT "sentense" FROM sentense WHERE meaning is NULL;"""
-SELECT_NULL_IPA = """SELECT "sentense" FROM sentense WHERE ipa is NULL;"""
-UPDATE_MEANING = """UPDATE sentense SET meaning = ? WHERE sentense = ? ;"""
-UPDATE_IPA = """UPDATE sentense SET ipa = ? WHERE sentense = ? ;"""
-TOPIC_LOCAL = """SELECT id, name FROM topic WHERE status = 'local';"""
-TOPIC_STREAM = """SELECT id, name FROM topic WHERE status = 'stream';"""
-SENS_IN_TOPIC = (
-    """SELECT "sentense", "meaning", "ipa" FROM "sentense" WHERE topic_id = ? ;"""
-)
-UPDATE_STATUS = """UPDATE topic SET status = 'stream' WHERE id = ? ;"""
 
 
 @dataclass
@@ -526,7 +571,7 @@ class SQLite:
         return __df
 
     def topic_to_bulk(
-        self, topic_id: int, sep="\t", custom: bool = False, language: str = ""
+        self, topic_id: int, sep="\t", external: bool = False, language: str = ""
     ) -> str:
         """Convert the content of topic to bulk text."""
         bulk: str = ""
@@ -535,7 +580,7 @@ class SQLite:
             __learable: str = df[0][idx]
             __meaning: str = df[1][idx]
             __ipa: str = df[2][idx]
-            if custom:
+            if external:
                 if language == "":
                     raise Exception("Missing language parameter.")
                 external_generate_audio(language, __learable.lower())
