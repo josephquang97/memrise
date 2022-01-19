@@ -45,6 +45,11 @@ addopts = "--cov=PyMemAPI"
 testpaths = [
     "tests",
 ]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+]
+
 
 [build-system]
 requires = ["poetry>=0.12"]
