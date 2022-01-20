@@ -306,7 +306,7 @@ class Course:
 
     def delete_level(self, level_id) -> bool:
         status: bool = False
-        payload: Dict[str,str] = {"level_id": f"{level_id}"}
+        payload: Dict[str, str] = {"level_id": f"{level_id}"}
         headers = {"Referer": f"https://app.memrise.com/course/{self.id}/edit/"}
         response = self.client.post(
             "/ajax/level/delete/", payload=payload, headers=headers
