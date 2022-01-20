@@ -28,7 +28,9 @@ class TestMemrise(unittest.TestCase):
             CLIENT.login("testingerror", "nopassword")
 
     def test_select_course(self):
-        success = CLIENT.login("dummy_user", "testing2022")
+        user = {"Enter username: ":"dummy_user", "Enter password: ":"testing2022"}
+        self.monkeypatch.setattr("builtins.input", lambda msg: user[msg])
+        success = CLIENT.login()
         if success is True:
             responses = {"Make your choice: ": "1"}
             self.monkeypatch.setattr("builtins.input", lambda msg : responses[msg])
@@ -91,6 +93,13 @@ class TestException(unittest.TestCase):
             self.monkeypatch.setattr("builtins.input", lambda msg : responses[msg])
             CLIENT.select_course()
 
+    def test_TypeError(self):
+        with self.assertRaises(TypeError):
+            global COURSE
+            level = COURSE.levels()[-1]
+            word = level.get_words()[-1]
+            word.upload_audio(1)
+
 
 # Test SQLite
 def test_sync_database(db_conn,cmd):
@@ -102,6 +111,18 @@ def test_sync_database(db_conn,cmd):
     COURSE.sync_database("./course/course.db")
     level = (COURSE.levels())[-1]
     assert (level.name=="I can't say for sure")
+
+def test_remove_audio(cmd):
+    global COURSE
+    level = (COURSE.levels())[-1]
+    words = level.get_words()
+    for word in words:
+        word.remove_audio()
+        word.upload_audio("./audio/audio.mp3")
+        with open("./audio/audio.mp3","rb") as fp:
+            audio = fp.read()
+            word.upload_audio(audio)
+    assert (1==1)
 
 class TestSQLite(unittest.TestCase):
     def test_SQLite_topic_to_bulk(self):

@@ -7,6 +7,8 @@ __pycache__/
 *.so
 
 # Distribution / packaging
+audio/VWJulie
+audio/VWPaul
 .Python
 build/
 develop-eggs/
