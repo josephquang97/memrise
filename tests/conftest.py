@@ -1,7 +1,6 @@
 import sqlite3
 import pytest
 
-from PyMemAPI.PyMemAPI import Memrise
 @pytest.fixture(scope="session")  
 def cmd():
 	COMMAND = """
@@ -134,11 +133,11 @@ def db_conn():
     	yield conn
 
 
-@pytest.fixture(scope="session")
-def course(monkeypatch):
-	client = Memrise()
-	user = {"Enter username: ":"dummy_user", "Enter password: ":"testing2022", "Make your choice: ": "1"}
-	monkeypatch.setattr("builtins.input", lambda msg: user[msg])
-	client.login()
-	crse =  client.select_course()
-	yield crse
+# @pytest.fixture(scope="session")
+# def course(monkeypatch):
+# 	client = Memrise()
+# 	user = {"Enter username: ":"dummy_user", "Enter password: ":"testing2022", "Make your choice: ": "1"}
+# 	monkeypatch.setattr("builtins.input", lambda msg: user[msg])
+# 	client.login()
+# 	crse =  client.select_course()
+# 	yield crse

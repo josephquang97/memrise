@@ -1,5 +1,0 @@
-<VOICE REQUIRED="NAME=VW Paul">
-<rate speed="-2" >
-<silence msec="100"/>we worked for hours on our math assignment.<silence msec="100"/>
-</rate>
-</VOICE>

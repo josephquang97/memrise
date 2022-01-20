@@ -343,6 +343,7 @@ class Course:
     def move_level(
         self, index: int, index_new: int, custom: Dict[str, str] = {}
     ) -> bool:
+        status: bool
         levels: List[Level] = self.levels()
         orders: List[str] = [str(item.id) for item in levels]
         if custom != {}:
@@ -366,12 +367,13 @@ class Course:
             )
         except ConnectionError as e:
             logging.warning(f"Failed to move the level due to {e}")
-            status: bool = False
+            status= False
+            return status
 
         # Validation status change name
         try:
             data = response.json()
-        except json.decoder.JSONDecodeError as e:
+        except (json.decoder.JSONDecodeError,UnboundLocalError) as e:
             raise JSONParseError(f"Invalid JSON response for a GET request: {e}")
         else:
             status = data["success"]

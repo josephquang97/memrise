@@ -1,13 +1,9 @@
 import sqlite3
 from PyMemAPI import __version__
 from PyMemAPI import Memrise, SQLite, Course
-from PyMemAPI.exception import LoginError, InvalidSeperateElement, AddBulkError, AddLevelError, InputOutOfRange
+from PyMemAPI.exception import LoginError, InvalidSeperateElement, AddBulkError, AddLevelError, InputOutOfRange, LanguageError
 import unittest
-import pytest
-import io
 from pytest import MonkeyPatch
-
-from PyMemAPI.exception.exception import LanguageError
 
 
 # Test version
@@ -29,8 +25,9 @@ class TestMemrise(unittest.TestCase):
 
     def test_select_course(self):
         user = {"Enter username: ":"dummy_user", "Enter password: ":"testing2022"}
-        self.monkeypatch.setattr("builtins.input", lambda msg: user[msg])
-        success = CLIENT.login()
+        # self.monkeypatch.setattr("builtins.input", lambda msg: user[msg])
+        # self.monkeypatch.setattr("getpass.getpass", lambda msg: user[msg])
+        success = CLIENT.login("dummy_user","testing2022")
         if success is True:
             responses = {"Make your choice: ": "1"}
             self.monkeypatch.setattr("builtins.input", lambda msg : responses[msg])
@@ -55,6 +52,15 @@ class TestCourse(unittest.TestCase):
         success = COURSE.delete_level(level_id)
         self.assertEqual(success, True)
 
+    def test_move_level(self):
+        global COURSE
+        success = COURSE.move_level(1,2)
+        self.assertEqual(1,1)
+
+    def test_update_external_language(self):
+        global COURSE
+        COURSE._update_audio_external("en")
+        self.assertEqual(1,1)
 
 # Test the Exceptions
 class TestException(unittest.TestCase):
@@ -94,10 +100,10 @@ class TestException(unittest.TestCase):
             CLIENT.select_course()
 
     def test_TypeError(self):
+        global COURSE
+        level = (COURSE.levels())[-1]
+        word = (level.get_words())[-1]
         with self.assertRaises(TypeError):
-            global COURSE
-            level = COURSE.levels()[-1]
-            word = level.get_words()[-1]
             word.upload_audio(1)
 
 
@@ -112,7 +118,7 @@ def test_sync_database(db_conn,cmd):
     level = (COURSE.levels())[-1]
     assert (level.name=="I can't say for sure")
 
-def test_remove_audio(cmd):
+def test_remove_audio():
     global COURSE
     level = (COURSE.levels())[-1]
     words = level.get_words()

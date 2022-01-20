@@ -1,5 +1,0 @@
-<VOICE REQUIRED="NAME=VW Julie">
-<rate speed="-2" >
-<silence msec="100"/>that's your end of year project.<silence msec="100"/>
-</rate>
-</VOICE>
