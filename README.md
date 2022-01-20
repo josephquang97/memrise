@@ -1,5 +1,7 @@
 # Memrise API
 
+<p align="center"><img src="https://github.com/josephquang97/memrise/actions/workflows/test.yml/badge.svg"><img src = "https://codecov.io/gh/josephquang97/memrise/branch/package/graphs/badge.svg?branch=main"></p>
+
 ## Installation
 
 ```
