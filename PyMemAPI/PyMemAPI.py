@@ -22,7 +22,14 @@ from .exception import (
     JSONParseError,
     InputOutOfRange,
 )
-from .text2speech import concat, external_generate_audio, generate_audio, choose_voices, generate_audio_except, CUSTOM
+from .text2speech import (
+    concat,
+    external_generate_audio,
+    generate_audio,
+    choose_voices,
+    generate_audio_except,
+    CUSTOM,
+)
 
 
 # COURSE = "https://app.memrise.com/v1.17/courses/{course_id}/"
@@ -45,6 +52,7 @@ SENS_IN_TOPIC = (
     """SELECT "sentense", "meaning", "ipa" FROM "sentense" WHERE topic_id = ? ;"""
 )
 UPDATE_STATUS = """UPDATE topic SET status = 'stream' WHERE id = ? ;"""
+
 
 @dataclass
 class Client:
@@ -114,7 +122,11 @@ class Client:
 
     def get(self, path: str, params: Optional[Dict[str, Any]] = None):
         try:
-            response = self.session.get(f"{URL}{path}", params=params, timeout=10,)
+            response = self.session.get(
+                f"{URL}{path}",
+                params=params,
+                timeout=10,
+            )
         except requests.exceptions.RequestException as e:
             raise ConnectionError(f"Get request failed: {e}")
 
@@ -141,7 +153,11 @@ class Client:
         payload["csrfmiddlewaretoken"] = self.session.cookies["csrftoken"]
         try:
             response = self.session.post(
-                f"{URL}{path}", files=files, headers=headers, data=payload, timeout=20,
+                f"{URL}{path}",
+                files=files,
+                headers=headers,
+                data=payload,
+                timeout=20,
             )
         except requests.exceptions.RequestException as e:
             raise ConnectionError(f"POST request failed': {e}")
@@ -287,12 +303,14 @@ class Course:
         for level in levels:
             success = success and self.delete_level(level.id)
         return success
-    
+
     def delete_level(self, level_id) -> bool:
         status: bool = False
-        data = {"level_id": f"{level_id}"}
+        payload: Dict[str,str] = {"level_id": f"{level_id}"}
         headers = {"Referer": f"https://app.memrise.com/course/{self.id}/edit/"}
-        response = self.client.post("/ajax/level/delete/", payload=data, headers=headers)
+        response = self.client.post(
+            "/ajax/level/delete/", payload=payload, headers=headers
+        )
         data = response.json()
         status = data["success"]
         return status
@@ -367,13 +385,13 @@ class Course:
             )
         except ConnectionError as e:
             logging.warning(f"Failed to move the level due to {e}")
-            status= False
+            status = False
             return status
 
         # Validation status change name
         try:
             data = response.json()
-        except (json.decoder.JSONDecodeError,UnboundLocalError) as e:
+        except (json.decoder.JSONDecodeError, UnboundLocalError) as e:
             raise JSONParseError(f"Invalid JSON response for a GET request: {e}")
         else:
             status = data["success"]
@@ -455,7 +473,7 @@ class Course:
     def update_audio(self, language: str, speed: int = 170):
         levels = self.levels()
         tempFolder = tempfile.TemporaryDirectory()
-        __voices__ : List[str] = []
+        __voices__: List[str] = []
         for level_idx in range(len(levels)):
             words = levels[level_idx].get_words()
             for idx in range(len(words)):
@@ -473,7 +491,7 @@ class Course:
                         text=words[idx].text,
                         path=tempFolder.name,
                         voices=__voices__,
-                        speed=speed
+                        speed=speed,
                     )
                 words[idx].upload_audio(files)
 
@@ -524,7 +542,8 @@ class Memrise(Client):
             raise InputOutOfRange(
                 indx_choice, f"Your choice out of range [1,{len(courses)}]"
             )
-        return courses[indx_choice - 1]
+        retCourse: Course = courses[indx_choice - 1]
+        return retCourse
 
 
 @dataclass
