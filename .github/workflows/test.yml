@@ -4,14 +4,6 @@ on:
  - push
  - pull_request
 
-codecov:
-  disable_default_path_fixes: true
-
-fixes:
-  - "before/::after/"  # move path   e.g., "before/path" => "after/path"
-  - "::after/"         # move root   e.g., "path/" => "after/path/"
-  - "before/::"        # reduce root e.g., "before/path/" => "path/"
-
 jobs:
   test:
     runs-on: ${{ matrix.os }}

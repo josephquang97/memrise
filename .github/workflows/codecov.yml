@@ -1,0 +1,23 @@
+#codecov:
+#  disable_default_path_fixes: true
+
+fixes:
+  - "before/::after/"  # move path   e.g., "before/path" => "after/path"
+  - "::after/"         # move root   e.g., "path/" => "after/path/"
+  - "before/::"        # reduce root e.g., "before/path/" => "path/"
+
+codecov:
+  branch: stable # set new Default branch
+
+codecov:
+  token: "2acf3005-deb1-4738-b8dd-10fea5dec2f5"
+  bot: "codecov-io"
+  ci:
+    - "travis.org"
+  strict_yaml_branch: "yaml-config"
+  max_report_age: 24
+  disable_default_path_fixes: no
+  require_ci_to_pass: yes
+  notify:
+    after_n_builds: 2
+    wait_for_ci: yes
