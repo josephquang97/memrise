@@ -1,4 +1,4 @@
-from schema import SQLite, Memrise, concat
+from PyMemAPI import Memrise
 from getpass import getpass
 
 FILE = "course.db"
@@ -58,4 +58,3 @@ if __name__ == "__main__":
 
 #     # Update the audio for each levels
 #     # course.update_audio("en", custom=True)
-

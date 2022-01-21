@@ -1,8 +1,9 @@
-from schema import Course, SQLite, Memrise
+from PyMemAPI import Course, SQLite, Memrise
 import logging
 from getpass import getpass
 
 FILE = "./course/course.db"
+
 
 def sync_database(file: str, course: Course):
     # Read the database find the new levels
@@ -33,6 +34,7 @@ def sync_database(file: str, course: Course):
     # Update the audio for each levels
     course.update_audio("en")
 
+
 def choose_course(username: str, password: str) -> Course:
     # Sign in Memrise
     user = Memrise()
@@ -41,6 +43,7 @@ def choose_course(username: str, password: str) -> Course:
     # Choose the course
     course: Course = user.select_course()
     return course
+
 
 if __name__ == "__main__":
     # Enter username and password here

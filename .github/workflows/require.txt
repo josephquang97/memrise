@@ -1,0 +1,9 @@
+pandas
+pydantic
+memrise
+text2ipa
+pyttsx3
+googletrans==4.0.0rc1
+pytest-cov
+mypy
+flake8

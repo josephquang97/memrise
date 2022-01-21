@@ -1,6 +1,0 @@
-pandas
-pydantic
-memrise
-text2ipa
-pyttsx3
-googletrans==4.0.0rc1

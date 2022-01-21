@@ -1,5 +1,5 @@
 from version1 import choose_course
-from schema import Course
+from PyMemAPI import Course
 from getpass import getpass
 
 
@@ -10,9 +10,9 @@ if __name__ == "__main__":
 
     course: Course = choose_course(__username__, __password__)
     custom = {
-        "1" : "14092053",
-        "5" : "14092052",
+        "1": "14092053",
+        "5": "14092052",
     }
     status = course.move_level(8, 5, custom)
-    if status: print("Success")
-    
+    if status:
+        print("Success")
