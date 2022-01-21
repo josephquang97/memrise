@@ -75,14 +75,14 @@ class TestException(unittest.TestCase):
 
     # When the user requests unsupport languages generate audio -> Handled
     # This testcase will failed in Linux
-    # def test_LanguageError(self):
-    #     global COURSE
-    #     responses = {
-    #         "Choose the voice number 1: ": "1",
-    #         "Enter the number of voices you wish: ": "1",
-    #         }
-    #     self.monkeypatch.setattr("builtins.input", lambda msg : responses[msg])
-    #     COURSE.update_audio("unvalid language")
+    def test_LanguageError(self):
+        global COURSE
+        responses = {
+            "Choose the voice number 1: ": "1",
+            "Enter the number of voices you wish: ": "1",
+            }
+        self.monkeypatch.setattr("builtins.input", lambda msg : responses[msg])
+        COURSE.update_audio("unvalid language")
 
     # Raise Exception for Coverage
     def test_AddLevelException(self):
@@ -102,23 +102,23 @@ class TestException(unittest.TestCase):
 
     def test_TypeError(self):
         global COURSE
-        level = (COURSE.levels())[-1]
-        word = (level.get_words())[-1]
+        level = (COURSE.levels())[0]
+        word = (level.get_words())[0]
         with self.assertRaises(TypeError):
             word.upload_audio(1)
 
 
 # Test SQLite
 # This case test for Windows
-# def test_sync_database(db_conn,cmd):
-#     cur: sqlite3.Cursor = db_conn.cursor()
-#     cur.executescript(cmd)
-#     cur.close()
-#     db_conn.commit()
-#     global COURSE
-#     COURSE.sync_database("./course/course.db")
-#     level = (COURSE.levels())[-1]
-#     assert (level.name=="I can't say for sure")
+def test_sync_database(db_conn,cmd):
+    cur: sqlite3.Cursor = db_conn.cursor()
+    cur.executescript(cmd)
+    cur.close()
+    db_conn.commit()
+    global COURSE
+    COURSE.sync_database("./course/course.db")
+    level = (COURSE.levels())[-1]
+    assert (level.name=="I can't say for sure")
 
 def test_remove_audio():
     global COURSE

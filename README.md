@@ -1,6 +1,6 @@
 # Memrise API
 
-<p align="center"><img src="https://github.com/josephquang97/memrise/actions/workflows/test.yml/badge.svg"><img src = "https://codecov.io/gh/josephquang97/memrise/branch/package/graphs/badge.svg?branch=main"></p>
+<p align="center"><img src="https://github.com/josephquang97/memrise/actions/workflows/test.yml/badge.svg"><a href="https://codecov.io/github/josephquang97/memrise/commit/8abed823b295beb7ecda8b564df2b81905fb81ad"><img src = "https://codecov.io/gh/josephquang97/memrise/branch/main/graphs/badge.svg?branch=main"></a></p>
 
 ## Installation
 
