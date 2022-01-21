@@ -102,6 +102,7 @@ class TestException(unittest.TestCase):
 
     def test_TypeError(self):
         global COURSE
+        success = COURSE.add_level_with_bulk("Test Level", "Hello\tXinChao", "\t")
         level = (COURSE.levels())[0]
         word = (level.get_words())[0]
         with self.assertRaises(TypeError):
